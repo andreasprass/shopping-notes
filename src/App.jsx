@@ -1,3 +1,4 @@
+import { useState } from "react";
 
 const groceryItems = [
   {
@@ -9,8 +10,8 @@ const groceryItems = [
   {
     id: 2,
     name: 'Gula Pasir',
-    quantity: 4,
-    checked: false,
+    quantity: 2,
+    checked: true,
   },
   {
     id: 3,
@@ -21,15 +22,35 @@ const groceryItems = [
   
 ]
 
+//Parent Function
 export default function App() {
+
+  const [items,setItems] = useState(groceryItems);
+  
+  function handleAddItem(item){
+    setItems([...items,item]);
+  }
+
+  function handleDeleteItem(id){
+    setItems((items) => items.filter((item) => item.id !== id));
+  }
+
+  function handleToggleItem(id){
+    setItems((items) => items.map((item) => item.id === id ? {...item, checked: !item.checked} : item));
+  }
+
+  function handleClearItems(){
+    setItems([]);
+  }
+
   return (
     <div className="app">
       
       <Header />
 
-      <Form />
+      <Form onAddItem={handleAddItem} />
       
-      <GroceryList />
+      <GroceryList items={items} onDeleteItem={handleDeleteItem} onToggleItem={handleToggleItem} onClearItems={handleClearItems} />
       
       <Footer />
 
@@ -42,49 +63,86 @@ function Header(){
   return (<h1>Catatan Belanjaku 📝</h1>);
 }
 
-function Form(){
+function Form({ onAddItem }){
+  const [name, setName] = useState('');
+  const [quantity, setQuantity] = useState(1);
+
+  function handleSubmit(e){
+    e.preventDefault();
+
+    if(!name) return;
+
+    const newItem = { name, quantity, checked:false, id: Date.now()};
+    onAddItem(newItem);
+
+    setName('');
+    setQuantity(1);
+  }
+
+  const quantityNum = [...Array(20)].map((_,i) => 
+    <option value={i + 1} key={i + 1} >
+      {i + 1}
+    </option>
+  );
+
   return (
-    <form className="add-form">
+    <form className="add-form" onSubmit={handleSubmit}>
         <h3>Hari ini belanja apa kita?</h3>
         <div>
-          <select>
-            <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
-            <option value="4">4</option>
-            <option value="5">5</option>
+          <select value={quantity} onChange={(e) => setQuantity(Number(e.target.value))}>
+            {quantityNum}
           </select>
-          <input type="text" placeholder="nama barang..." />
+          <input type="text" placeholder="nama barang..." value={name} onChange={(e) => setName(e.target.value)}/>
         </div>
         <button>Tambah</button>
       </form>
   )
 }
 
-function GroceryList(){
+function GroceryList({ items, onDeleteItem, onToggleItem, onClearItems}){
+  const [sortBy, setSortBy] = useState('checked');
+  let sortedItems;
+
+  if(sortBy === 'input'){
+    sortedItems = items;
+  }
+  if(sortBy === 'name'){
+    sortedItems = items.slice().sort((a, b) => a.name.localeCompare(b.name));
+  }
+  if(sortBy === 'checked'){
+    sortedItems = items.slice().sort((a, b) => a.checked - b.checked);
+  }
+  
   return (
     <>
       <div className="list">
           <ul>
-            {groceryItems.map(item => 
-              <li key = {item.id}>
-                <input type="checkbox" />
-                <span>{item.quantity} Gula Pasir</span>
-                <button>&times;</button>
-              </li>
+            {items.map(item => 
+              <Items item={item} key={item.id} onDeleteItem={onDeleteItem} onToggleItem={onToggleItem}/>
             )}
           </ul>
         </div>
 
       <div className="actions">
-        <select>
+        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
           <option value="input">Urutkan berdasarkan urutan input</option>
           <option value="name">Urutkan berdasarkan nama barang</option>
           <option value="checked">Urutkan berdasarkan ceklis</option>
         </select>
-        <button>Bersihkan Daftar</button>
+        <button onClick={onClearItems}>Bersihkan Daftar</button>
       </div>
     </>
+  )
+}
+
+//Part of Grocery List
+function Items({item, onDeleteItem, onToggleItem}){
+  return (
+    <li key = {item.id}>
+      <input type="checkbox" checked={item.checked} onChange={() => onToggleItem(item.id)}/>
+      <span style={item.checked ? { textDecoration: 'line-through' } : {} }>{item.quantity} {item.name}</span>
+      <button onClick={() => onDeleteItem(item.id)}>&times;</button>
+    </li>
   )
 }
 
